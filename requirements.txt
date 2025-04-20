@@ -1,2 +1,4 @@
+vulners
+colorama
 pyyaml
-
+vulners

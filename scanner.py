@@ -4,6 +4,8 @@ import socket
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 import platform
+import vulners
+import requests
 
 
 def ping_host(ip):
@@ -26,7 +28,7 @@ def ping_host(ip):
 
 def banner_snatcher(ip,port):
     '''
- Grabs a banner up to 512 bytes big. (arbitrary but reasonable!)
+ Grabs a banner up to 512 bytes big. (arbitrary size but reasonable!)
     :param ip:
     :param port:
     :return:    banner information
@@ -40,6 +42,16 @@ def banner_snatcher(ip,port):
     except Exception:
         return "No banner"
 
+#def cve_match(banner): #Want to use Vulners to search things based on banner info..
+#This would require HEAVY Banner sanitization! otherwise you get ai slop from vulners
+#    '''
+#    uses banner information to try and match to a CVE.
+#    :param banner:
+#    :return:
+#    '''
+#    vulners_api =vulners.VulnersApi("ECX21PLW5TIPKDSJU92WJZOG2A6Y508JERC7X9QBWZ4OBNU7DJWVP7MONM2DKKJ9")
+#    try:
+#        vulnerables = vulners_api.search_cpe
 
 def scan_port(ip, port):
     '''
@@ -71,10 +83,12 @@ def run_scanner(target_subnet, port_range):
     port_start, port_end = map(int, port_range.split('-')) #map to a bunch of integers split by '-'
     ports = list(range(port_start, port_end + 1))
     final_results = {}
+    final_results_banner = {}
 
     for ip in open_hosts:
         print(f"\n[~] Scanning {ip}...")
         open_ports = []
+        open_ports_banner = []
 
         with ThreadPoolExecutor(max_workers=50) as executor: #oooh threads! so cool!
             results = executor.map(lambda p: scan_port(ip, p), ports) #scans ports
@@ -82,11 +96,18 @@ def run_scanner(target_subnet, port_range):
         for port in results:
             if port:
                 banner = banner_snatcher(ip, port)
-               # print(f"  [OPEN] {ip}:{port}")   #Printing looked tacky!
-                open_ports.append({"port":port,"banner":banner})
 
+               # print(f"  [OPEN] {ip}:{port}")   #Printing looked tacky!
+                open_ports.append(port)
+                open_ports_banner.append({
+                    "port": port,
+                    "banner": banner
+                })
         final_results[ip] = {
             "open_ports": open_ports
         }
+        final_results_banner[ip] = { #messy.. but i want 2 separate outputs. CL & YAML
+            "open_ports": open_ports_banner
+        }
 
-    return final_results
+    return final_results,final_results_banner
