@@ -24,6 +24,22 @@ def ping_host(ip):
     except:
         return None
 
+def banner_snatcher(ip,port):
+    '''
+ Grabs a banner up to 512 bytes big. (arbitrary but reasonable!)
+    :param ip:
+    :param port:
+    :return:    banner information
+    '''
+    try:
+        sock = socket.socket() #make socket
+        sock.settimeout(1)
+        sock.connect((ip, port)) #try to connect
+        banner = sock.recv(1024).decode()
+        return banner if banner else "Banner not shared!"
+    except Exception:
+        return "No banner"
+
 
 def scan_port(ip, port):
     '''
@@ -31,7 +47,7 @@ def scan_port(ip, port):
     '''
     try:
         sock = socket.socket() #make socket
-        sock.settimeout(0.5)
+        sock.settimeout(1)
         result = sock.connect_ex((ip, port)) #try to connect
         sock.close()
         if result == 0:
@@ -65,8 +81,9 @@ def run_scanner(target_subnet, port_range):
 
         for port in results:
             if port:
-               # print(f"  [OPEN] {ip}:{port}")
-                open_ports.append(port)
+                banner = banner_snatcher(ip, port)
+               # print(f"  [OPEN] {ip}:{port}")   #Printing looked tacky!
+                open_ports.append({"port":port,"banner":banner})
 
         final_results[ip] = {
             "open_ports": open_ports
